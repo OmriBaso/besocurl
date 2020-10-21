@@ -1,5 +1,5 @@
 # besoCurl
-A library for HTTP / HTTPs request support SSPI and PAC file parsing(Automatic proxy settings detection)
+A library for HTTP / HTTPs requests that supports SSPI and PAC file parsing(Automatic proxy settings detection)
 
 besoCurl by Omri Baso  
 
@@ -50,7 +50,7 @@ the proxy, if a PAC file is configured AND a manual proxy is set, it will choose
 if only a manual proxy is set it will use it, if no proxy is configured i will not use any proxies and go directly to the internet.  
 
 if a proxy is set, the HTTP request will use SSPI to authenticate to the proxy without entering any credentials.  
-# More Information about hopw it works: https://docs.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-  
+More Information about hopw it works: https://docs.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-  
 
 In general i recommend to use `auto_detect_proxy=True` all the time.  
 
