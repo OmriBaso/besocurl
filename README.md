@@ -9,7 +9,7 @@ credits for pieces of code taken from other places are inside the code
 
 some code was taken from the Px project  
 https://github.com/genotrance/px/blob/master/px.py  
-#Dependencies: 
+# Dependencies:   
       pycurl-7.43.0.2  (I added the installiation for Windows that matchs python 3.6)  
       python 3.6 (due to Pycurl limitiation if you mannged to install it on 3.6+ it will also work)  
 
