@@ -54,7 +54,7 @@ More Information about hopw it works: https://docs.microsoft.com/en-us/windows/w
 
 In general i recommend to use `auto_detect_proxy=True` all the time.  
 
-to can also set a proxy manully when invoking a request as the variables `proxies=("127.0.0.1", 8080)`  
+you can also set a proxy manully when invoking a request as the variables `proxies=("127.0.0.1", 8080)`  
 proxies must have the format mentioned above.  
 
 TODO:  
