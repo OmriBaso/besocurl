@@ -12,6 +12,9 @@ try:
 except ImportError:
     import urlparse
 
+# To download Pycurl installtion 
+# https://dl.bintray.com/pycurl/pycurl/    
+    
 # --------------------------------------- PAC Parser ------------------------------------------- # 
 #
 # proxy.py 
