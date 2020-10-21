@@ -10,11 +10,11 @@ credits for pieces of code taken from other places are inside the code
 some code was taken from the Px project  
 https://github.com/genotrance/px/blob/master/px.py  
 
+
+# Teachnical Infomration  
 the besoCurl project comes to make Pycurl more human usable while implmenting 
 more automatic approch to the library, the library supports SSPI authentication to proxies over HTTP or HTTP(s) 
 besoCurl as simple functions such as:  
-
-# Teachnical Infomration  
 ```python  
 def main():  
     url = 'http://192.168.189.136/'
