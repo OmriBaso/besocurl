@@ -19,7 +19,7 @@ https://github.com/genotrance/px/blob/master/px.py
 # Teachnical Infomration  
 the besoCurl project comes to make Pycurl more human usable while implmenting 
 more automatic approch to the library, the library supports SSPI authentication to proxies over HTTP or HTTP(s) 
-besoCurl as simple functions such as:  
+besoCurl has simple functions such as:  
 ```python  
 import besoCurl
 
