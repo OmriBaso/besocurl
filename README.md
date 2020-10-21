@@ -70,3 +70,4 @@ TODO:
 1. add WPAD (Auto Detect Settings support),  
 2. add PUT method,  
 3. and multipart forms on POST requests 
+4. add session options so request will not authenticate everyime they are sent all over again  
