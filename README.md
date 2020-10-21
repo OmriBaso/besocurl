@@ -16,6 +16,8 @@ the besoCurl project comes to make Pycurl more human usable while implmenting
 more automatic approch to the library, the library supports SSPI authentication to proxies over HTTP or HTTP(s) 
 besoCurl as simple functions such as:  
 ```python  
+import besoCurl
+
 def main():  
     url = 'http://192.168.189.136/'
     useragents = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; Safari/537.36'  
@@ -29,6 +31,8 @@ main()
 OR for a post request
 
 ```python
+import besoCurl
+
 def main():
     url = 'http://192.168.189.136/'
     useragents = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; Safari/537.36'
