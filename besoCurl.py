@@ -135,31 +135,6 @@ def winhttp_find_proxy_for_url(url, autodetect=False, pac_url=None, autologon=Tr
     return ""
 
 
-def parse_proxy(proxystrs):
-    if not proxystrs:
-        return []
-
-    servers = []
-    for proxystr in [i.strip() for i in proxystrs.split(",")]:
-        pserver = [i.strip() for i in proxystr.split(":")]
-        if len(pserver) == 1 and pserver != 'DIRECT':
-            pserver.append(80)
-        elif len(pserver) == 2:
-            try:
-                pserver[1] = int(pserver[1])
-            except ValueError:
-                pprint("Bad proxy server port: " + pserver[1])
-                sys.exit()
-        else:
-            pprint("Bad proxy server definition: " + proxystr)
-            sys.exit()
-
-        if tuple(pserver) not in servers:
-            servers.append(tuple(pserver))
-
-    return servers
-
-
 def how_to_go(url):
     proxies = []
     ieConfig = WINHTTP_CURRENT_USER_IE_PROXY_CONFIG()
