@@ -27,7 +27,7 @@ def main():
     url = 'http://192.168.189.136/'
     useragents = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; Safari/537.36'  
     headers = ["Accept: OmriBeso", "Content-type: application/json"]  
-    r = post(url, headers=headers, user_agent=useragents, auto_detect_proxy=True)  
+    r = besoCurl.get(url, headers=headers, user_agent=useragents, auto_detect_proxy=True)  
     print(r.text)  
 
 main()  
