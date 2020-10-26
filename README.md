@@ -48,9 +48,6 @@ def main():
 main()    
 ```
 
-NOTE: the get and post requests functions returns an object of a dictionary with text, and status_code
-for example `print(r['text'])` or `print(r['status_code'])`
-
 the code infront of you will return the HTML content of the url inserted into the function,  
 user the User-Agent set to it and the headers. 
 also - `auto_detect_proxy=True` will try to fetch the windows settings for accessing the internet. 
