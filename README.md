@@ -28,7 +28,7 @@ def main():
     useragents = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; Safari/537.36'  
     headers = ["Accept: OmriBeso", "Content-type: application/json"]  
     r = post(url, headers=headers, user_agent=useragents, auto_detect_proxy=True)  
-    print(r['text'])  
+    print(r.text)  
 
 main()  
 ```
@@ -43,7 +43,7 @@ def main():
     useragents = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; Safari/537.36'
     headers = ["Accept: OmriBeso", "Content-type: application/json"]
     r = besoCurl.post(url, data=data, headers=headers, user_agent=user_agent, auto_detect_proxy=True)
-    print(r['text'])
+    print(r.text)
 
 main()    
 ```
