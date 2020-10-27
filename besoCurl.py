@@ -4,20 +4,9 @@ import io
 import sys
 import ctypes
 import ctypes.wintypes
-#from StringIO import StringIO
 # --------------------------------------- PAC Parser ------------------------------------------- # 
-#
-# proxy.py 
 # Taken some of the code from the Px project
 # https://github.com/genotrance/px/blob/master/px.py
-
-# Print if possible
-def pprint(*objs):
-    try:
-        print(*objs)
-    except:
-        pass
-
 
 # Windows version
 #  6.1 = Windows 7
@@ -339,6 +328,7 @@ class Session:
         self._retrieved_headers = io.BytesIO()
         self._session_headers = io.BytesIO()
 
+        raise NotImplementedError("Not Fully Implemented yet - Cannot be used")
     @property
     def text(self):
         return self._response
@@ -359,8 +349,6 @@ class Session:
     def get(self, url, headers=None, proxies=None, user_agent="Omri-Baso-HumanCurl-Ver.01", allow_redirect=False, auto_detect_proxy=False):
         return get(url, headers=headers, proxies=proxies, user_agent=user_agent, allow_redirect=allow_redirect, auto_detect_proxy=auto_detect_proxy)
 
-    raise NotImplementedError("Not Fully Implemented yet - Cannot be used")
+    
 
 # ----------------------------------- SESSION CLASS END ----------------------------------- # 
-
- 
