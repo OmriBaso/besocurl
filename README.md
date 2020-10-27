@@ -16,7 +16,7 @@ https://github.com/genotrance/px/blob/master/px.py
       1. install pycurl-7.43.0.2.win-amd64-py3.6.exe || Or get your version from here https://dl.bintray.com/pycurl/pycurl/
       2. pip install pycurl
 
-# Teachnical Infomration  
+# Technical Information  
 the besoCurl project comes to make Pycurl more human usable while implmenting 
 more automatic approch to the library, the library supports SSPI authentication to proxies over HTTP or HTTP(s) 
 besoCurl has simple functions such as:  
