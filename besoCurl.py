@@ -2,7 +2,6 @@ import pycurl
 import certifi
 import io
 import sys
-import sys
 import ctypes
 import ctypes.wintypes
 #from StringIO import StringIO
