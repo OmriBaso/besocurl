@@ -6,12 +6,6 @@ import sys
 import ctypes
 import ctypes.wintypes
 #from StringIO import StringIO
-# Python 2.x vs 3.x support
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
-
 # --------------------------------------- PAC Parser ------------------------------------------- # 
 #
 # proxy.py 
