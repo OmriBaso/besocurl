@@ -47,7 +47,7 @@ if only a manual proxy is set it will use it, if no proxy is configured i will n
 if a proxy is set, the HTTP request will use SSPI to authenticate to the proxy without entering any credentials.  
 More Information about how it works: https://docs.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-  
 In general i recommend to use `auto_detect_proxy=True` all the time.  
-you can also set a proxy manully when invoking a request as the variables `proxies=("127.0.0.1", 8080)`  
+you can also set a proxy manully when invoking a request as the variables `proxies=[("127.0.0.1", 8080)]`  
 proxies must have the format mentioned above.  
 TODO:  
 1. add WPAD (Auto Detect Settings support),  
