@@ -2,31 +2,11 @@ import pycurl
 import certifi
 import io
 import sys
-import time
-import sys
 import ctypes
 import ctypes.wintypes
-#from StringIO import StringIO
-import winreg as winreg
-# Python 2.x vs 3.x support
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
-
 # --------------------------------------- PAC Parser ------------------------------------------- # 
-#
-# proxy.py 
 # Taken some of the code from the Px project
 # https://github.com/genotrance/px/blob/master/px.py
-
-# Print if possible
-def pprint(*objs):
-    try:
-        print(*objs)
-    except:
-        pass
-
 
 # Windows version
 #  6.1 = Windows 7
@@ -35,6 +15,8 @@ def pprint(*objs):
 # 10.0 = Windows 10
 WIN_VERSION = float(str(sys.getwindowsversion().major) + "." + str(sys.getwindowsversion().minor))
 
+
+DEFAULT_USER_AGENT = 'besoCurl/ver 0.2'
 
 ###
 # Proxy detection
@@ -134,12 +116,83 @@ def winhttp_find_proxy_for_url(url, autodetect=False, pac_url=None, autologon=Tr
     # WinHttpCloseHandle()
     return ""
 
+def winttp_detect_auto_proxy_config_url(target_url): # Setup 
+    ACCESS_TYPE = WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY
+    if WIN_VERSION < 6.3:
+        ACCESS_TYPE = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY
+        
+    hSession = ctypes.windll.winhttp.WinHttpOpen(
+    ctypes.wintypes.LPCWSTR("Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"),
+    ACCESS_TYPE, WINHTTP_NO_PROXY_NAME,
+    WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC)
+
+    pAutoProxyOptions = WINHTTP_AUTOPROXY_OPTIONS()
+    pProxyInfo = WINHTTP_PROXY_INFO()
+
+    pAutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT
+    pAutoProxyOptions.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A
+    pAutoProxyOptions.lpszAutoConfigUrl = 0
+    lpcwszUrl = ctypes.wintypes.LPCWSTR(target_url)
+    result = ctypes.windll.winhttp.WinHttpGetProxyForUrl(hSession, lpcwszUrl, ctypes.byref(pAutoProxyOptions),
+                                                            ctypes.byref(pProxyInfo))
+    if result == False:
+
+        dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A
+        ppwszAutoConfigUrl = ctypes.wintypes.LPWSTR()
+        result = ctypes.windll.winhttp.WinHttpDetectAutoProxyConfigUrl(dwAutoDetectFlags, 
+                                                                        ctypes.byref(ppwszAutoConfigUrl))
+
+        if result == False:
+            pass
+        else:
+            pAutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL
+            pAutoProxyOptions.dwAutoDetectFlags = 0
+            pAutoProxyOptions.fAutoLogonIfChallenged = True
+            pAutoProxyOptions.lpszAutoConfigUrl = ppwszAutoConfigUrl
+            result = ctypes.windll.winhttp.WinHttpGetProxyForUrl(hSession, lpcwszUrl, ctypes.byref(pAutoProxyOptions),
+                                                                    ctypes.byref(pProxyInfo))
+            if result:
+                proxy_final = pProxyInfo.lpszProxy.replace(" ", ",").replace(";", ",").replace(",DIRECT", "")
+            else:
+                pass
+    else:
+        proxy_final = pProxyInfo.lpszProxy.replace(" ", ",").replace(";", ",").replace(",DIRECT", "")
+       
+
+    return proxy_final
+
 
 def how_to_go(url):
     proxies = []
     ieConfig = WINHTTP_CURRENT_USER_IE_PROXY_CONFIG()
     result = ctypes.windll.winhttp.WinHttpGetIEProxyConfigForCurrentUser(ctypes.byref(ieConfig))
-    if ieConfig.lpszAutoConfigUrl != None:
+    if ieConfig.fAutoDetect:
+        t = winttp_detect_auto_proxy_config_url(url)
+        if "," in t:
+            t = t.split(",")
+            if t[0] == 'DIRECT':
+                return []
+            else:
+                for proxy in t:
+                    proxy = proxy.split(":")
+                    proxyip, proxyport = proxy[0], proxy[1]
+                    t = proxyip, int(proxyport)
+                    proxies.append(t)
+
+                return proxies
+        else:
+            if t == 'DIRECT':
+                return []
+            else:
+                for proxy in t:
+                    proxy = proxy.split(":")
+                    proxyip, proxyport = proxy[0], proxy[1]
+                    t = proxyip, int(proxyport)
+                    proxies.append(t) 
+
+                return proxies        
+
+    elif ieConfig.lpszAutoConfigUrl != None:
         pac_url = ieConfig.lpszAutoConfigUrl
         t = winhttp_find_proxy_for_url(url, pac_url=pac_url)
         t = t.split(",")
@@ -204,9 +257,10 @@ def initPyCURL(proxy_servers=[]):
 
 # ----------------------------------- GET REQUEST CLASS ----------------------------------- # 
 class get:
-    def __init__(self, url, headers=[], proxies=None, user_agent="Omri-Baso-HumanCurl-Ver.01", allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
         self.url = url
         self._response = None
+        self._response_content = None        
         self._status_code = None
         self.headers_list = headers
         self.proxies = proxies
@@ -230,6 +284,10 @@ class get:
     def headers(self):
         return self._retrieved_headers.getvalue().decode()
 
+    @property
+    def content(self):
+        return self._response_content
+
     def request(self):
         pycurl.global_init(pycurl.GLOBAL_WIN32)
         pycurl.global_init(pycurl.GLOBAL_SSL)
@@ -241,7 +299,6 @@ class get:
             c = initPyCURL(self.proxies)
         else:
             c = initPyCURL()
-
 
         if self.allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
@@ -257,11 +314,21 @@ class get:
         c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
         c.setopt(c.URL, self.url) 
         c.setopt(c.WRITEDATA, buffer)
-        c.perform() 
-        status_code = c.getinfo(c.RESPONSE_CODE)
+        try:
+            c.perform()
+        except pycurl.error as e:
+            e = str(e)
+            if "returned error" in e:
+                status_code = e[40:].split(' ')[0]
+            else:
+                raise pycurl.error(e)
+        else:
+            status_code = c.getinfo(c.RESPONSE_CODE) 
+
         c.close()
         body = buffer.getvalue()
         
+        self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
         self._status_code = int(status_code)
 # ----------------------------------- GET REQUEST CLASS END ----------------------------------- # 
@@ -269,9 +336,10 @@ class get:
 
 # ----------------------------------- POST REQUEST CLASS ----------------------------------- # 
 class post:
-    def __init__(self, url, data=None, headers=[], proxies=None, user_agent="Omri-Baso-HumanCurl-Ver.01", allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
         self.url = url
         self._response = None
+        self._response_content = None        
         self._status_code = None
         self.headers_list = headers
         self.proxies = proxies
@@ -296,6 +364,10 @@ class post:
     def headers(self):
         return self._retrieved_headers.getvalue().decode()
 
+    @property
+    def content(self):
+        return self._response_content
+
     def request(self):
         pycurl.global_init(pycurl.GLOBAL_WIN32)
         pycurl.global_init(pycurl.GLOBAL_SSL)
@@ -325,29 +397,45 @@ class post:
         c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
         c.setopt(c.URL, self.url) 
         c.setopt(c.WRITEDATA, buffer)
-        c.setopt(c.POSTFIELDS, self.data)
-        c.perform()
-        status_code = c.getinfo(c.RESPONSE_CODE) 
+        if self.data:
+            c.setopt(c.POSTFIELDS, self.data)        
+        
+        try:
+            c.perform()
+        except pycurl.error as e:
+            e = str(e)
+            if "returned error" in e:
+                status_code = e[40:].split(' ')[0]
+            else:
+                raise pycurl.error(e)
+        else:
+            status_code = c.getinfo(c.RESPONSE_CODE) 
+
         c.close()
         body = buffer.getvalue()
 
+        self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
         self._status_code = int(status_code)
 # ----------------------------------- POST REQUEST CLASS END ----------------------------------- # 
 
-
-# ----------------------------------- SESSION CLASS ----------------------------------- # 
-class Session:
-    def __init__(self, headers=[], proxies=None, user_agent=None, allow_redirect=False, auto_detect_proxy=False):
+# ----------------------------------- PUT REQUEST CLASS START ----------------------------------- # 
+class put:
+    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+        self.url = url
         self._response = None
+        self._response_content = None        
         self._status_code = None
         self.headers_list = headers
-        self.user_agent = user_agent
         self.proxies = proxies
+        self.data = data
+        self.user_agent = user_agent
         self.allow_redirect = allow_redirect
+        self._retrieved_headers = io.StringIO()
         self.auto_detect_proxy = auto_detect_proxy
         self._retrieved_headers = io.BytesIO()
-        self._session_headers = io.BytesIO()
+
+        self.request()
 
     @property
     def text(self):
@@ -361,115 +449,179 @@ class Session:
     def headers(self):
         return self._retrieved_headers.getvalue().decode()
 
+    @property
+    def content(self):
+        return self._response_content
 
-    def post(self, url, data=None, headers=[], proxies=None, user_agent="Omri-Baso-HumanCurl-Ver.01", allow_redirect=False, auto_detect_proxy=False):
+    def request(self):
         pycurl.global_init(pycurl.GLOBAL_WIN32)
         pycurl.global_init(pycurl.GLOBAL_SSL)
         buffer = io.BytesIO()
- 
-        if self.proxies != proxies:
-            proxies = self.proxies
-        else:
-            if auto_detect_proxy == True:
-                proxies = how_to_go(url)              
-
-        if self.allow_redirect != allow_redirect:
-            allow_redirect = self.allow_redirect
-
-        if self.user_agent != user_agent:
-            user_agent = self.user_agent
-
-        if self.headers_list != headers: 
-            headers = self.headers_list
-
+        if self.auto_detect_proxy == True:
+            self.proxies = how_to_go(self.url)
 
         if self.proxies != None:
-            c = initPyCURL(proxies)
+            c = initPyCURL(self.proxies)
+        else:
+            c = initPyCURL()
+
+        if self.allow_redirect == False:
+            c.setopt(c.FOLLOWLOCATION, False)
+        elif self.allow_redirect == True:
+            c.setopt(c.FOLLOWLOCATION, True)
+        else:
+            raise ValueError('allow_redirect must be true or false')
+        if self.user_agent:
+            c.setopt(c.USERAGENT, self.user_agent)
+        if self.headers_list:
+            c.setopt(pycurl.HTTPHEADER, self.headers_list)
+
+
+        c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
+        c.setopt(c.URL, self.url) 
+        c.setopt(c.WRITEDATA, buffer)
+        c.setopt(pycurl.CUSTOMREQUEST, "PUT")
+        if self.data:
+            c.setopt(c.POSTFIELDS, self.data)
+
+        try:
+            c.perform()
+        except pycurl.error as e:
+            e = str(e)
+            if "returned error" in e:
+                status_code = e[40:].split(' ')[0]
+            else:
+                raise pycurl.error(e)
+        else:
+            status_code = c.getinfo(c.RESPONSE_CODE) 
+            
+        c.close()
+        body = buffer.getvalue()
+
+
+        self._response_content = body
+        self._response = body.decode('utf-8', 'ignore')
+        self._status_code = int(status_code)
+# ----------------------------------- PUT REQUEST CLASS END ----------------------------------- # 
+
+# ----------------------------------- DELETE REQUEST CLASS START ----------------------------------- # 
+class delete:
+    def __init__(self, url, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+        self.url = url
+        self._response = None
+        self._response_content = None
+        self._status_code = None
+        self.headers_list = headers
+        self.proxies = proxies
+        self.user_agent = user_agent
+        self.allow_redirect = allow_redirect
+        self._retrieved_headers = io.StringIO()
+        self.auto_detect_proxy = auto_detect_proxy
+        self._retrieved_headers = io.BytesIO()
+
+        self.request()
+
+    @property
+    def text(self):
+        return self._response
+
+    @property
+    def status_code(self):
+        return self._status_code
+
+    @property
+    def headers(self):
+        return self._retrieved_headers.getvalue().decode()
+
+    @property
+    def content(self):
+        return self._response_content
+
+    def request(self):
+        pycurl.global_init(pycurl.GLOBAL_WIN32)
+        pycurl.global_init(pycurl.GLOBAL_SSL)
+        buffer = io.BytesIO()
+        if self.auto_detect_proxy == True:
+            self.proxies = how_to_go(self.url)
+
+        if self.proxies != None:
+            c = initPyCURL(self.proxies)
         else:
             c = initPyCURL()
 
 
-        if allow_redirect == False:
+
+        if self.allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
-        elif allow_redirect == True:
+        elif self.allow_redirect == True:
             c.setopt(c.FOLLOWLOCATION, True)
         else:
             raise ValueError('allow_redirect must be true or false')
-        if user_agent:
-            c.setopt(c.USERAGENT, user_agent)
-        if headers:
-            c.setopt(pycurl.HTTPHEADER, headers)
-
-        c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
-        c.setopt(c.URL, url) 
-        c.setopt(c.WRITEDATA, buffer)
-        c.setopt(c.POSTFIELDS, data)
-        c.perform()
-        status_code = c.getinfo(c.RESPONSE_CODE) 
-        c.close()
-        body = buffer.getvalue()
-
-        self._response = body.decode('utf-8', 'ignore')
-        self._status_code = int(status_code)
-
-
-    def get(self, url, headers=None, proxies=None, user_agent="Omri-Baso-HumanCurl-Ver.01", allow_redirect=False, auto_detect_proxy=False):
-        pycurl.global_init(pycurl.GLOBAL_WIN32)
-        pycurl.global_init(pycurl.GLOBAL_SSL)
-        buffer = io.BytesIO()
-        if self.proxies == proxies:
-            proxies = self.proxies
-        else:
-            if auto_detect_proxy == True:
-                proxies = how_to_go(url)
-
-        if self.allow_redirect != allow_redirect:
-            allow_redirect = self.allow_redirect
-
-        if self.user_agent != user_agent:
-            user_agent = self.user_agent
-
-        if self.headers_list != headers: 
-            headers = self.headers_list
-
-        if self.proxies != None:
-            c = initPyCURL(proxies)
-        else:
-            c = initPyCURL()
-
-        if allow_redirect == False:
-            c.setopt(c.FOLLOWLOCATION, False)
-        elif allow_redirect == True:
-            c.setopt(c.FOLLOWLOCATION, True)
-        else:
-            raise ValueError('allow_redirect must be true or false')
-        if user_agent:
-            c.setopt(c.USERAGENT, user_agent)
-        if headers:
-            c.setopt(pycurl.HTTPHEADER, headers)
+        if self.user_agent:
+            c.setopt(c.USERAGENT, self.user_agent)
+        if self.headers_list:
+            c.setopt(pycurl.HTTPHEADER, self.headers_list)
 
 
         c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
-        c.setopt(c.URL, url) 
+        c.setopt(c.URL, self.url) 
         c.setopt(c.WRITEDATA, buffer)
-        c.perform() 
-        status_code = c.getinfo(c.RESPONSE_CODE)
+        c.setopt(pycurl.CUSTOMREQUEST, "DELETE")
+        try:
+            c.perform()
+        except pycurl.error as e:
+            e = str(e)
+            if "returned error" in e:
+                status_code = e[40:].split(' ')[0]
+            else:
+                raise pycurl.error(e)
+        else:
+            status_code = c.getinfo(c.RESPONSE_CODE) 
+            
         c.close()
         body = buffer.getvalue()
-        
+
+
+        self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
         self._status_code = int(status_code)
 
+# ----------------------------------- DELETE REQUEST CLASS END ----------------------------------- #
+
+# ----------------------------------- SESSION CLASS ----------------------------------- # 
+class Session:
+    def __init__(self, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+        self._response = None
+        self._status_code = None
+        self.headers_list = headers
+        self.user_agent = user_agent
+        self.proxies = proxies
+        self.allow_redirect = allow_redirect
+        self.auto_detect_proxy = auto_detect_proxy
+        self._retrieved_headers = io.BytesIO()
+        self._session_headers = io.BytesIO()
+
+        raise NotImplementedError("Not Fully Implemented yet - Cannot be used")
+    @property
+    def text(self):
+        return self._response
+
+    @property
+    def status_code(self):
+        return self._status_code
+
+    @property
+    def headers(self):
+        return self._retrieved_headers.getvalue().decode()
+
+
+    def post(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+        return post(url, data=data, headers=headers, proxies=proxies, user_agent=user_agent, allow_redirect=allow_redirect, auto_detect_proxy=auto_detect_proxy)
+
+
+    def get(self, url, headers=None, proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+        return get(url, headers=headers, proxies=proxies, user_agent=user_agent, allow_redirect=allow_redirect, auto_detect_proxy=auto_detect_proxy)
+
+    
 
 # ----------------------------------- SESSION CLASS END ----------------------------------- # 
-
-proxies = [("127.0.0.1", 8080)]
-
-r = Session()
-r.get('https://ynet.co.il', allow_redirect=True, proxies=proxies)
-headers = r.headers
-print(headers)
-
-"""
-TO-DO: 
-"""
