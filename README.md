@@ -55,7 +55,7 @@ In general i recommend to use `auto_detect_proxy=True` all the time.
 you can also set a proxy manully when invoking a request as the variables `proxies=[("127.0.0.1", 8080)]`  
 proxies must have the format mentioned above.  
 TODO:  
-1. add WPAD (Auto Detect Settings support),  
-2. add PUT method,  
+1. add WPAD (Auto Detect Settings support) - DONE 06/01/2021,  
+2. add PUT method,  - DONE 06/01/2021
 3. and multipart forms on POST requests 
 4. add session options so request will not authenticate everyime they are sent all over again 
