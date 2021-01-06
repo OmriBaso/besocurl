@@ -11,8 +11,12 @@ Download pycurl from: https://dl.bintray.com/pycurl/pycurl/
       pycurl-7.43.0.2  (I added the installiation for Windows that matchs python 3.6 because thats the one i used to build this library)  
       python 3.x 
       Installtion:  
-      1. install pycurl-7.43.0.2.win-amd64-py3.6.exe || Or get your version from here https://dl.bintray.com/pycurl/pycurl/
-      2. pip install pycurl
+      Windows:
+            1. Install pycurl.exe from here to your python version https://dl.bintray.com/pycurl/pycurl/
+      Linux:
+            1. apt install libcurl4-openssl-dev libssl-dev  
+            2. apt install python3-dev  
+            3. python -m pip3 install pycurl  
 
 # Technical Information  
 the besoCurl project comes to make Pycurl more human usable while implmenting 
