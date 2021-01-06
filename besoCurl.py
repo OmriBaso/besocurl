@@ -1,9 +1,13 @@
 import pycurl
 import certifi
 import io
-import sys
-import ctypes
-import ctypes.wintypes
+import sys, platform
+import ctypes, sys
+try:
+    import ctypes.wintypes
+except ValueError:
+    print("[-] %s - Windows Features cannot be used on Unix" % sys.argv[0])
+
 # --------------------------------------- PAC Parser ------------------------------------------- # 
 # Taken some of the code from the Px project
 # https://github.com/genotrance/px/blob/master/px.py
@@ -13,56 +17,57 @@ import ctypes.wintypes
 #  6.2 = Windows 8
 #  6.3 = Windows 8.1
 # 10.0 = Windows 10
-WIN_VERSION = float(str(sys.getwindowsversion().major) + "." + str(sys.getwindowsversion().minor))
 
+DEFAULT_USER_AGENT = 'besoCurl/ver 0.3'
 
-DEFAULT_USER_AGENT = 'besoCurl/ver 0.2'
+if platform.system() == "Windows":
+    WIN_VERSION = float(str(sys.getwindowsversion().major) + "." + str(sys.getwindowsversion().minor))
 
-###
-# Proxy detection
+    ###
+    # Proxy detection
 
-class WINHTTP_CURRENT_USER_IE_PROXY_CONFIG(ctypes.Structure):
-    _fields_ = [("fAutoDetect", ctypes.wintypes.BOOL), # "Automatically detect settings"
-                ("lpszAutoConfigUrl", ctypes.wintypes.LPWSTR), # "Use automatic configuration script, Address"
-                ("lpszProxy", ctypes.wintypes.LPWSTR), # "1.2.3.4:5" if "Use the same proxy server for all protocols",
-                                                       # else advanced "ftp=1.2.3.4:5;http=1.2.3.4:5;https=1.2.3.4:5;socks=1.2.3.4:5"
-                ("lpszProxyBypass", ctypes.wintypes.LPWSTR), # ";"-separated list, "Bypass proxy server for local addresses" adds "<local>"
-               ]
+    class WINHTTP_CURRENT_USER_IE_PROXY_CONFIG(ctypes.Structure):
+        _fields_ = [("fAutoDetect", ctypes.wintypes.BOOL), # "Automatically detect settings"
+                    ("lpszAutoConfigUrl", ctypes.wintypes.LPWSTR), # "Use automatic configuration script, Address"
+                    ("lpszProxy", ctypes.wintypes.LPWSTR), # "1.2.3.4:5" if "Use the same proxy server for all protocols",
+                                                        # else advanced "ftp=1.2.3.4:5;http=1.2.3.4:5;https=1.2.3.4:5;socks=1.2.3.4:5"
+                    ("lpszProxyBypass", ctypes.wintypes.LPWSTR), # ";"-separated list, "Bypass proxy server for local addresses" adds "<local>"
+                ]
 
-class WINHTTP_AUTOPROXY_OPTIONS(ctypes.Structure):
-    _fields_ = [("dwFlags", ctypes.wintypes.DWORD),
-                ("dwAutoDetectFlags", ctypes.wintypes.DWORD),
-                ("lpszAutoConfigUrl", ctypes.wintypes.LPCWSTR),
-                ("lpvReserved", ctypes.c_void_p),
-                ("dwReserved", ctypes.wintypes.DWORD),
-                ("fAutoLogonIfChallenged", ctypes.wintypes.BOOL), ]
+    class WINHTTP_AUTOPROXY_OPTIONS(ctypes.Structure):
+        _fields_ = [("dwFlags", ctypes.wintypes.DWORD),
+                    ("dwAutoDetectFlags", ctypes.wintypes.DWORD),
+                    ("lpszAutoConfigUrl", ctypes.wintypes.LPCWSTR),
+                    ("lpvReserved", ctypes.c_void_p),
+                    ("dwReserved", ctypes.wintypes.DWORD),
+                    ("fAutoLogonIfChallenged", ctypes.wintypes.BOOL), ]
 
-class WINHTTP_PROXY_INFO(ctypes.Structure):
-    _fields_ = [("dwAccessType", ctypes.wintypes.DWORD),
-                ("lpszProxy", ctypes.wintypes.LPCWSTR),
-                ("lpszProxyBypass", ctypes.wintypes.LPCWSTR), ]
+    class WINHTTP_PROXY_INFO(ctypes.Structure):
+        _fields_ = [("dwAccessType", ctypes.wintypes.DWORD),
+                    ("lpszProxy", ctypes.wintypes.LPCWSTR),
+                    ("lpszProxyBypass", ctypes.wintypes.LPCWSTR), ]
 
-# Parameters for WinHttpOpen, http://msdn.microsoft.com/en-us/library/aa384098(VS.85).aspx
-WINHTTP_NO_PROXY_NAME = 0
-WINHTTP_NO_PROXY_BYPASS = 0
-WINHTTP_FLAG_ASYNC = 0x10000000
+    # Parameters for WinHttpOpen, http://msdn.microsoft.com/en-us/library/aa384098(VS.85).aspx
+    WINHTTP_NO_PROXY_NAME = 0
+    WINHTTP_NO_PROXY_BYPASS = 0
+    WINHTTP_FLAG_ASYNC = 0x10000000
 
-# dwFlags values
-WINHTTP_AUTOPROXY_AUTO_DETECT = 0x00000001
-WINHTTP_AUTOPROXY_CONFIG_URL = 0x00000002
+    # dwFlags values
+    WINHTTP_AUTOPROXY_AUTO_DETECT = 0x00000001
+    WINHTTP_AUTOPROXY_CONFIG_URL = 0x00000002
 
-# dwAutoDetectFlags values
-WINHTTP_AUTO_DETECT_TYPE_DHCP = 0x00000001
-WINHTTP_AUTO_DETECT_TYPE_DNS_A = 0x00000002
+    # dwAutoDetectFlags values
+    WINHTTP_AUTO_DETECT_TYPE_DHCP = 0x00000001
+    WINHTTP_AUTO_DETECT_TYPE_DNS_A = 0x00000002
 
-# dwAccessType values
-WINHTTP_ACCESS_TYPE_DEFAULT_PROXY = 0
-WINHTTP_ACCESS_TYPE_NO_PROXY = 1
-WINHTTP_ACCESS_TYPE_NAMED_PROXY = 3
-WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY = 4
+    # dwAccessType values
+    WINHTTP_ACCESS_TYPE_DEFAULT_PROXY = 0
+    WINHTTP_ACCESS_TYPE_NO_PROXY = 1
+    WINHTTP_ACCESS_TYPE_NAMED_PROXY = 3
+    WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY = 4
 
-# Error messages
-WINHTTP_ERROR_WINHTTP_UNABLE_TO_DOWNLOAD_SCRIPT = 12167
+    # Error messages
+    WINHTTP_ERROR_WINHTTP_UNABLE_TO_DOWNLOAD_SCRIPT = 12167
 
 def winhttp_find_proxy_for_url(url, autodetect=False, pac_url=None, autologon=True):
     # Fix issue #51
@@ -116,12 +121,83 @@ def winhttp_find_proxy_for_url(url, autodetect=False, pac_url=None, autologon=Tr
     # WinHttpCloseHandle()
     return ""
 
+def winttp_detect_auto_proxy_config_url(target_url): # Setup 
+    ACCESS_TYPE = WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY
+    if WIN_VERSION < 6.3:
+        ACCESS_TYPE = WINHTTP_ACCESS_TYPE_DEFAULT_PROXY
+        
+    hSession = ctypes.windll.winhttp.WinHttpOpen(
+    ctypes.wintypes.LPCWSTR("Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"),
+    ACCESS_TYPE, WINHTTP_NO_PROXY_NAME,
+    WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC)
+
+    pAutoProxyOptions = WINHTTP_AUTOPROXY_OPTIONS()
+    pProxyInfo = WINHTTP_PROXY_INFO()
+
+    pAutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT
+    pAutoProxyOptions.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A
+    pAutoProxyOptions.lpszAutoConfigUrl = 0
+    lpcwszUrl = ctypes.wintypes.LPCWSTR(target_url)
+    result = ctypes.windll.winhttp.WinHttpGetProxyForUrl(hSession, lpcwszUrl, ctypes.byref(pAutoProxyOptions),
+                                                            ctypes.byref(pProxyInfo))
+    if result == False:
+
+        dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A
+        ppwszAutoConfigUrl = ctypes.wintypes.LPWSTR()
+        result = ctypes.windll.winhttp.WinHttpDetectAutoProxyConfigUrl(dwAutoDetectFlags, 
+                                                                        ctypes.byref(ppwszAutoConfigUrl))
+
+        if result == False:
+            pass
+        else:
+            pAutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL
+            pAutoProxyOptions.dwAutoDetectFlags = 0
+            pAutoProxyOptions.fAutoLogonIfChallenged = True
+            pAutoProxyOptions.lpszAutoConfigUrl = ppwszAutoConfigUrl
+            result = ctypes.windll.winhttp.WinHttpGetProxyForUrl(hSession, lpcwszUrl, ctypes.byref(pAutoProxyOptions),
+                                                                    ctypes.byref(pProxyInfo))
+            if result:
+                proxy_final = pProxyInfo.lpszProxy.replace(" ", ",").replace(";", ",").replace(",DIRECT", "")
+            else:
+                pass
+    else:
+        proxy_final = pProxyInfo.lpszProxy.replace(" ", ",").replace(";", ",").replace(",DIRECT", "")
+       
+
+    return proxy_final
+
 
 def how_to_go(url):
     proxies = []
     ieConfig = WINHTTP_CURRENT_USER_IE_PROXY_CONFIG()
-    result = ctypes.windll.winhttp.WinHttpGetIEProxyConfigForCurrentUser(ctypes.byref(ieConfig))
-    if ieConfig.lpszAutoConfigUrl != None:
+    ctypes.windll.winhttp.WinHttpGetIEProxyConfigForCurrentUser(ctypes.byref(ieConfig)) # No need to save it into a variable
+    if ieConfig.fAutoDetect:
+        t = winttp_detect_auto_proxy_config_url(url)
+        if "," in t:
+            t = t.split(",")
+            if t[0] == 'DIRECT':
+                return []
+            else:
+                for proxy in t:
+                    proxy = proxy.split(":")
+                    proxyip, proxyport = proxy[0], proxy[1]
+                    t = proxyip, int(proxyport)
+                    proxies.append(t)
+
+                return proxies
+        else:
+            if t == 'DIRECT':
+                return []
+            else:
+                for proxy in t:
+                    proxy = proxy.split(":")
+                    proxyip, proxyport = proxy[0], proxy[1]
+                    t = proxyip, int(proxyport)
+                    proxies.append(t) 
+
+                return proxies        
+
+    elif ieConfig.lpszAutoConfigUrl != None:
         pac_url = ieConfig.lpszAutoConfigUrl
         t = winhttp_find_proxy_for_url(url, pac_url=pac_url)
         t = t.split(",")
@@ -181,20 +257,27 @@ def initPyCURL(proxy_servers=[]):
     c.setopt(c.SSL_VERIFYPEER, 0)
     c.setopt(c.SSL_VERIFYHOST, 0)
 
+    #def log(debug_type, debug_msg):
+    #    print("[%d] %s" % (debug_type, debug_msg.decode('utf-8', 'backslashreplace').strip()))
+    #c.setopt(c.VERBOSE, True)
+    #c.setopt(c.DEBUGFUNCTION, log)
+
     return c
 #==================================================================== CURL Init
 
 # ----------------------------------- GET REQUEST CLASS ----------------------------------- # 
 class get:
-    def __init__(self, url, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, headers=[], proxies=None, proxy_pass=None,user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
         self.url = url
         self._response = None
         self._response_content = None        
         self._status_code = None
-        self.headers_list = headers
-        self.proxies = proxies
-        self.user_agent = user_agent
-        self.allow_redirect = allow_redirect
+        self._headers_list = headers
+        self._proxies = proxies
+        self._proxy_pass = proxy_pass
+        self._user_agent = user_agent
+        self._allow_redirect = allow_redirect
+        self._userpass = username_pass
         self.auto_detect_proxy = auto_detect_proxy
         self._retrieved_headers = io.BytesIO()
 
@@ -222,23 +305,31 @@ class get:
         pycurl.global_init(pycurl.GLOBAL_SSL)
         buffer = io.BytesIO()
         if self.auto_detect_proxy == True:
-            self.proxies = how_to_go(self.url)
+            self._proxies = how_to_go(self.url)
 
-        if self.proxies != None:
-            c = initPyCURL(self.proxies)
+        if self._proxies != None:
+            c = initPyCURL(self._proxies)
         else:
             c = initPyCURL()
-
-        if self.allow_redirect == False:
+    
+        if self._allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
-        elif self.allow_redirect == True:
+        elif self._allow_redirect == True:
             c.setopt(c.FOLLOWLOCATION, True)
         else:
             raise ValueError('allow_redirect must be true or false')
-        if self.user_agent:
-            c.setopt(c.USERAGENT, self.user_agent)
-        if self.headers_list:
-            c.setopt(pycurl.HTTPHEADER, self.headers_list)
+        if self._user_agent:
+            c.setopt(c.USERAGENT, self._user_agent)
+        if self._headers_list:
+            c.setopt(pycurl.HTTPHEADER, self._headers_list)
+
+        if self._userpass:
+            c.setopt(c.HTTPAUTH, c.HTTPAUTH_NTLM)
+            c.setopt(c.USERPWD, self._userpass)
+        
+        if self._proxy_pass:
+            c.setopt(c.PROXYUSERPWD, self._proxy_pass)
+            c.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5)
 
         c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
         c.setopt(c.URL, self.url) 
@@ -259,13 +350,16 @@ class get:
         
         self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
-        self._status_code = int(status_code)
+        try:
+            self._status_code = int(status_code)
+        except ValueError:
+            self._status_code = status_code
 # ----------------------------------- GET REQUEST CLASS END ----------------------------------- # 
 
 
 # ----------------------------------- POST REQUEST CLASS ----------------------------------- # 
 class post:
-    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
         self.url = url
         self._response = None
         self._response_content = None        
@@ -273,6 +367,7 @@ class post:
         self.headers_list = headers
         self.proxies = proxies
         self.data = data
+        self.userpass = username_pass        
         self.user_agent = user_agent
         self.allow_redirect = allow_redirect
         self._retrieved_headers = io.StringIO()
@@ -309,7 +404,9 @@ class post:
         else:
             c = initPyCURL()
 
-
+        if self.userpass:
+            c.setopt(c.HTTPAUTH, c.HTTPAUTH_NTLM)
+            c.setopt(c.USERPWD, self.userpass)
 
         if self.allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
@@ -326,8 +423,10 @@ class post:
         c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
         c.setopt(c.URL, self.url) 
         c.setopt(c.WRITEDATA, buffer)
+        c.setopt(c.POST, 1)
         if self.data:
-            c.setopt(c.POSTFIELDS, self.data)        
+            c.setopt(c.POSTFIELDS, self.data)
+                
         
         try:
             c.perform()
@@ -350,7 +449,7 @@ class post:
 
 # ----------------------------------- PUT REQUEST CLASS START ----------------------------------- # 
 class put:
-    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, data=None, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
         self.url = url
         self._response = None
         self._response_content = None        
@@ -358,6 +457,7 @@ class put:
         self.headers_list = headers
         self.proxies = proxies
         self.data = data
+        self.userpass = username_pass        
         self.user_agent = user_agent
         self.allow_redirect = allow_redirect
         self._retrieved_headers = io.StringIO()
@@ -393,6 +493,10 @@ class put:
             c = initPyCURL(self.proxies)
         else:
             c = initPyCURL()
+
+        if self.userpass:
+            c.setopt(c.HTTPAUTH, c.HTTPAUTH_NTLM)
+            c.setopt(c.USERPWD, self.userpass)
 
         if self.allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
@@ -435,13 +539,14 @@ class put:
 
 # ----------------------------------- DELETE REQUEST CLASS START ----------------------------------- # 
 class delete:
-    def __init__(self, url, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, url, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
         self.url = url
         self._response = None
         self._response_content = None
         self._status_code = None
         self.headers_list = headers
         self.proxies = proxies
+        self.userpass = username_pass        
         self.user_agent = user_agent
         self.allow_redirect = allow_redirect
         self._retrieved_headers = io.StringIO()
@@ -478,7 +583,9 @@ class delete:
         else:
             c = initPyCURL()
 
-
+        if self.userpass:
+            c.setopt(c.HTTPAUTH, c.HTTPAUTH_NTLM)
+            c.setopt(c.USERPWD, self.userpass)
 
         if self.allow_redirect == False:
             c.setopt(c.FOLLOWLOCATION, False)
@@ -519,12 +626,13 @@ class delete:
 
 # ----------------------------------- SESSION CLASS ----------------------------------- # 
 class Session:
-    def __init__(self, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False):
+    def __init__(self, headers=[], proxies=None, user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
         self._response = None
         self._status_code = None
         self.headers_list = headers
         self.user_agent = user_agent
         self.proxies = proxies
+        self.userpass = username_pass        
         self.allow_redirect = allow_redirect
         self.auto_detect_proxy = auto_detect_proxy
         self._retrieved_headers = io.BytesIO()
