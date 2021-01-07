@@ -1,4 +1,11 @@
-import pycurl
+import os
+try:
+    import pycurl
+except ImportError:
+    print("Cannot Import PyCurl , would you like to install it?")   
+
+#$pathvargs = {C:\Temp\UpgradeClientInstaller\setup.exe /S /v/qn }
+# Invoke-Command -ScriptBlock $pathvargs     
 import certifi
 import io
 import sys, platform
@@ -77,7 +84,7 @@ def winhttp_find_proxy_for_url(url, autodetect=False, pac_url=None, autologon=Tr
 
     ctypes.windll.winhttp.WinHttpOpen.restype = ctypes.c_void_p
     hInternet = ctypes.windll.winhttp.WinHttpOpen(
-        ctypes.wintypes.LPCWSTR("Px"),
+        ctypes.wintypes.LPCWSTR("Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"),
         ACCESS_TYPE, WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC)
     if not hInternet:
@@ -353,7 +360,7 @@ class get:
         try:
             self._status_code = int(status_code)
         except ValueError:
-            self._status_code = status_code
+            self._status_code = int(status_code.split("'")[0])
 # ----------------------------------- GET REQUEST CLASS END ----------------------------------- # 
 
 
@@ -444,7 +451,10 @@ class post:
 
         self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
-        self._status_code = int(status_code)
+        try:
+            self._status_code = int(status_code)
+        except ValueError:
+            self._status_code = int(status_code.split("'")[0])
 # ----------------------------------- POST REQUEST CLASS END ----------------------------------- # 
 
 # ----------------------------------- PUT REQUEST CLASS START ----------------------------------- # 
@@ -534,7 +544,10 @@ class put:
 
         self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
-        self._status_code = int(status_code)
+        try:
+            self._status_code = int(status_code)
+        except ValueError:
+            self._status_code = int(status_code.split("'")[0])
 # ----------------------------------- PUT REQUEST CLASS END ----------------------------------- # 
 
 # ----------------------------------- DELETE REQUEST CLASS START ----------------------------------- # 
@@ -620,9 +633,100 @@ class delete:
 
         self._response_content = body
         self._response = body.decode('utf-8', 'ignore')
-        self._status_code = int(status_code)
+        try:
+            self._status_code = int(status_code)
+        except ValueError:
+            self._status_code = int(status_code.split("'")[0])
 
 # ----------------------------------- DELETE REQUEST CLASS END ----------------------------------- #
+
+class options:
+    def __init__(self, url, headers=[], proxies=None, proxy_pass=None,user_agent=DEFAULT_USER_AGENT, allow_redirect=False, auto_detect_proxy=False, username_pass=None):
+        self.url = url
+        self._response = None
+        self._response_content = None        
+        self._status_code = None
+        self._headers_list = headers
+        self._proxies = proxies
+        self._proxy_pass = proxy_pass
+        self._user_agent = user_agent
+        self._allow_redirect = allow_redirect
+        self._userpass = username_pass
+        self.auto_detect_proxy = auto_detect_proxy
+        self._retrieved_headers = io.BytesIO()
+
+
+        self.request()
+
+    @property
+    def text(self):
+        return self._response
+
+    @property
+    def status_code(self):
+        return self._status_code
+
+    @property
+    def headers(self):
+        return self._retrieved_headers.getvalue().decode()
+
+    @property
+    def content(self):
+        return self._response_content
+
+    def request(self):
+        pycurl.global_init(pycurl.GLOBAL_WIN32)
+        pycurl.global_init(pycurl.GLOBAL_SSL)
+        buffer = io.BytesIO()
+
+        if self._proxies != None:
+            c = initPyCURL(self._proxies)
+        else:
+            c = initPyCURL()
+    
+        if self._allow_redirect == False:
+            c.setopt(c.FOLLOWLOCATION, False)
+        elif self._allow_redirect == True:
+            c.setopt(c.FOLLOWLOCATION, True)
+        else:
+            raise ValueError('allow_redirect must be true or false')
+        if self._user_agent:
+            c.setopt(c.USERAGENT, self._user_agent)
+        if self._headers_list:
+            c.setopt(pycurl.HTTPHEADER, self._headers_list)
+
+        if self._userpass:
+            c.setopt(c.HTTPAUTH, c.HTTPAUTH_NTLM)
+            c.setopt(c.USERPWD, self._userpass)
+        
+        if self._proxy_pass:
+            c.setopt(c.PROXYUSERPWD, self._proxy_pass)
+            c.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5)
+
+        c.setopt(c.HEADERFUNCTION, self._retrieved_headers.write)
+        c.setopt(pycurl.CUSTOMREQUEST, "OPTIONS")
+        c.setopt(c.URL, self.url) 
+        c.setopt(c.WRITEDATA, buffer)
+        try:
+            c.perform()
+        except pycurl.error as e:
+            e = str(e)
+            if "returned error" in e:
+                status_code = e[40:].split(' ')[0]
+            else:
+                raise pycurl.error(e)
+        else:
+            status_code = c.getinfo(c.RESPONSE_CODE) 
+
+        c.close()
+        body = buffer.getvalue()
+        
+        self._response_content = body
+        self._response = body.decode('utf-8', 'ignore')
+        try:
+            self._status_code = int(status_code)
+        except ValueError:
+            self._status_code = int(status_code.split("'")[0])
 
 # ----------------------------------- SESSION CLASS ----------------------------------- # 
 class Session:
