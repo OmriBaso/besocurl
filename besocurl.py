@@ -257,7 +257,7 @@ def initPyCURL(proxy_servers=[]):
     #c.setopt(c.FOLLOWLOCATION, True) # Follow Redirection - you can change to false, I made it so its enabled automaticly here // Edited to be enabled through method
     CURLOPT_ENCODING = getattr(c, 'ACCEPT_ENCODING', c.ENCODING)
     c.setopt(CURLOPT_ENCODING, '')
-    c.setopt(c.FAILONERROR, True)
+    c.setopt(c.FAILONERROR, False)
     c.setopt(c.COOKIEFILE, '')
 
     c.setopt(c.CAINFO, certifi.where())
