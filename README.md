@@ -1,8 +1,7 @@
 # besocurl
 A library for HTTP / HTTPs requests that supports SSPI and PAC file parsing(Automatic proxy settings detection)
 besoCurl by Omri Baso  
-Date: 21/10/2020  
-All right reserved to Omri Baso for this library  
+Date: 21/10/2020
 credits for pieces of code taken from other places are inside the code  
 some code was taken from the Px project  
 https://github.com/genotrance/px/blob/master/px.py  
