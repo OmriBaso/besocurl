@@ -1,4 +1,4 @@
-# besoCurl
+# besocurl
 A library for HTTP / HTTPs requests that supports SSPI and PAC file parsing(Automatic proxy settings detection)
 besoCurl by Omri Baso  
 Date: 21/10/2020  
