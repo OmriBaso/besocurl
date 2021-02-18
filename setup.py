@@ -32,7 +32,11 @@ class PostInstallCommand(install):
             py_bit_rate = "win-amd64" if 8 * struct.calcsize("P") == 64 else "win32"
             search_string = "%s-py%s.exe" % (py_bit_rate, py_ver)
             check_py_curl_version = os.popen("powershell -enc %s" % make_powershell('(New-Object Net.WebClient).downloadString("https://dl.bintray.com/pycurl/pycurl/") ; exit')).read()
-            check_py_curl_version = re.search("(pycurl.*{}?)\"".format(search_string), check_py_curl_version).group(1)
+            try:
+                check_py_curl_version = re.search("(pycurl.*{}?)\"".format(search_string), check_py_curl_version).group(1)
+            except AttributeError:
+                print("[-] PyCurl was not found for your python version which is %s" % py_ver)
+                
             print("[+] Downloading %s" % check_py_curl_version)
             download_file = 'powershell (New-Object Net.WebClient).DownloadFile("https://dl.bintray.com/pycurl/pycurl/%s", "$env:TEMP\pycurl-install.exe") ; exit'.strip("\n") % check_py_curl_version
             os.popen("powershell -enc %s" % make_powershell(download_file))
@@ -60,7 +64,3 @@ setuptools.setup(
     'install': PostInstallCommand,
 },
 )
-
-
-
-
