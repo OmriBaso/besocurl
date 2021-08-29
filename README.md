@@ -7,7 +7,7 @@ some code was taken from the Px project
 https://github.com/genotrance/px/blob/master/px.py  
 Download pycurl from: https://dl.bintray.com/pycurl/pycurl/
 # Dependencies:   
-      pycurl-7.43.0.2  (I added the installiation for Windows that matchs python 3.6 because thats the one i used to build this library)  
+      pycurl-7.43.0.2  (I added the installation for Windows that matchs python 3.6 because thats the one i used to build this library)  
       python 3.x 
       Installtion:  
       Windows:
